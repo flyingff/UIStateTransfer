@@ -1,0 +1,20 @@
+UIStateTranferer is a simple framework 
+that helps you write application(
+especially simple or sample Swing app) 
+in a state-centric way. It may helps 
+you think clearly andreduce your coding
+burden.
+
+This pack contains:
+
+package gameX:
+	GameX -> a simple demo game using 
+	this framework;
+
+package net.flyingff.commons.ui:
+	UIStateTransfer -> core class of 
+	this framework;
+	ActionListenerAdder -> a adapter
+	class for JButton and Button
+
+please contact me via ff@flyingff.net
