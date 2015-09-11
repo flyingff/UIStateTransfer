@@ -13,13 +13,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-public final class UIStateTransfer {
+public final class StateTransfer {
 	private static final String D$EF$EX = new String(new byte[]{0x21,0x0,0x12,0x44,(byte) 0xff,(byte) 0xc4,0x42});
-	private Map<String, UIState> states = new HashMap<>();
-	private Map<String, UIState> exceptions = new HashMap<>();
+	private Map<String, State> states = new HashMap<>();
+	private Map<String, State> exceptions = new HashMap<>();
 	private Map<String, Set<Runnable>> events = new HashMap<>();
 	private Set<VariantObject<?>> vars = new HashSet<>();
-	private UIState current;
+	private State current;
 	// Tool variable
 	private ScheduledExecutorService ses = Executors.newScheduledThreadPool(4);
 
@@ -29,13 +29,13 @@ public final class UIStateTransfer {
 	 * @param name - name of the state
 	 * @param in - actions that we take when switch to this state
 	 * @param out - actions that we take when switch off this state
-	 * @return a reference to the {@link UIState} object
+	 * @return a reference to the {@link State} object
 	 * @note parameter {@link in} and {@link out} are only valid when create a new state
 	 */
-	public UIState ep(String name, Runnable in, Runnable out){
-		UIState sx = states.get(name);
+	public State ep(String name, Runnable in, Runnable out){
+		State sx = states.get(name);
 		if(sx == null){
-			sx = new UIState(in, out, name);
+			sx = new State(in, out, name);
 			states.put(name, sx);
 		}
 		return sx;
@@ -44,9 +44,9 @@ public final class UIStateTransfer {
 	 * Get the reference of a state. If the specified state does not exit,
 	 * a new state will create.  
 	 * @param name - name of the state
-	 * @return a reference to the {@link UIState} object
+	 * @return a reference to the {@link State} object
 	 */
-	public UIState ep(String name){
+	public State ep(String name){
 		return ep(name, null, null);
 	}
 	/**
@@ -54,11 +54,18 @@ public final class UIStateTransfer {
 	 * @param fistStateame - name of the state
 	 */
 	public void start(String fistStateame){
-		UIState sx = states.get(fistStateame);
+		State sx = states.get(fistStateame);
 		if(sx == null) {
 			throw new RuntimeException("Unknown state name:" + fistStateame);
 		}
 		switchTo(sx);
+	}
+	/**
+	 * Get the name of current String
+	 * @return current state's name or null if no current state
+	 */
+	public String state(){
+		return current == null? null : current.name;
 	}
 	/**
 	 * Declare all states (initialize them) to avoid null-reference;
@@ -67,7 +74,7 @@ public final class UIStateTransfer {
 	public void eps(String... name) {
 		for(final String sx : name) {
 			if(states.containsKey(sx)) throw new RuntimeException("Duplicated state name: " + name);
-			states.put(sx, new UIState(null, null, sx));
+			states.put(sx, new State(null, null, sx));
 		}
 	}
 	/**
@@ -98,7 +105,7 @@ public final class UIStateTransfer {
 	 * @param exceptionName - name of the exception
 	 */
 	public void ex(String exceptionName) {
-		UIState target = exceptions.get(exceptionName);
+		State target = exceptions.get(exceptionName);
 		if(target != null) {
 			switchTo(target);
 		} else {
@@ -133,14 +140,14 @@ public final class UIStateTransfer {
 	 * @param s - the state
 	 * @return
 	 */
-	private final boolean isCurrent(UIState s){ 
+	private final boolean isCurrent(State s){ 
 		return s == current;
 	}
 	/**
 	 * Switch to another state
 	 * @param next - next state
 	 */
-	private void switchTo(UIState next) {
+	private void switchTo(State next) {
 		if(current != null)
 			current.leave();
 		current = next;
@@ -168,11 +175,11 @@ public final class UIStateTransfer {
 	 * @author FF
 	 *
 	 */
-	public final class UIState {
+	public final class State {
 		private final List<Runnable> runs = new ArrayList<>();
 		private Runnable into, leave;
 		public final String name;
-		private UIState(Runnable into, Runnable leave, String name) {
+		private State(Runnable into, Runnable leave, String name) {
 			this.into = into;
 			this.leave = leave;
 			this.name = name;
@@ -196,7 +203,7 @@ public final class UIStateTransfer {
 		 * @param next - name of next state
 		 * @return this object
 		 */
-		public final UIState edge(ActionListenerAdder method, String next) {
+		public final State edge(ActionListenerAdder method, String next) {
 			return edge(method, null, next);
 		}
 		/**
@@ -206,8 +213,8 @@ public final class UIStateTransfer {
 		 * @param next - name of next state
 		 * @return this object
 		 */
-		public final UIState edge(ActionListenerAdder method, Consumer<ActionEvent> act, String next){
-			final UIState nexts = states.get(next);
+		public final State edge(ActionListenerAdder method, Consumer<ActionEvent> act, String next){
+			final State nexts = states.get(next);
 			if(nexts == null) throw new RuntimeException("State not found: " + next);
 			method.addActionListener(e -> {
 				if(isCurrent(this)) {if(act != null) act.accept(e);; switchTo(nexts); }
@@ -221,14 +228,14 @@ public final class UIStateTransfer {
 		 * 				the name of next state
 		 * @return this object
 		 */
-		public final UIState edge(ActionListenerAdder method, Callable<String> act){
+		public final State edge(ActionListenerAdder method, Callable<String> act){
 			if(act == null) throw new NullPointerException();
 			method.addActionListener(e -> {
 				if(isCurrent(this)) {
 					try {
 						String next;
 						next = act.call();
-						final UIState nexts = states.get(next);
+						final State nexts = states.get(next);
 						if(nexts == null) throw new RuntimeException("State not found: " + next);
 						switchTo(nexts); 
 					} catch (Exception e1) {
@@ -245,7 +252,7 @@ public final class UIStateTransfer {
 		 * @param next - name of next state
 		 * @return this object
 		 */
-		public final UIState edge(String event, String next) {
+		public final State edge(String event, String next) {
 			return edge(event, null, next);
 		}
 		/**
@@ -255,8 +262,8 @@ public final class UIStateTransfer {
 		 * @param next - name of next state
 		 * @return this object
 		 */
-		public final UIState edge(String event, Runnable act, String next){
-			final UIState nexts = states.get(next);
+		public final State edge(String event, Runnable act, String next){
+			final State nexts = states.get(next);
 			if(nexts == null) throw new RuntimeException("State not found: " + next);
 			regEvent(event, ()-> {
 				if(isCurrent(this)) {if(act != null) act.run(); switchTo(nexts); }
@@ -269,14 +276,14 @@ public final class UIStateTransfer {
 		 * @param act - action we take when transfer, which returns the name of the next state
 		 * @return this object
 		 */
-		public final UIState edge(String event, Callable<String> act){
+		public final State edge(String event, Callable<String> act){
 			if(act == null) throw new NullPointerException();
 			regEvent(event, () -> {
 				if(isCurrent(this)) {
 					try {
 						String next;
 						next = act.call();
-						final UIState nexts = states.get(next);
+						final State nexts = states.get(next);
 						if(nexts == null) throw new RuntimeException("State not found: " + next);
 						switchTo(nexts); 
 					} catch (Exception e1) {
@@ -294,7 +301,7 @@ public final class UIStateTransfer {
 		 * @param next - name of next state
 		 * @return
 		 */
-		public final UIState jmpLater(int sleepms, String next) {
+		public final State jmpLater(int sleepms, String next) {
 			return jmpLater(sleepms, null, next);
 		}
 		/**
@@ -304,8 +311,8 @@ public final class UIStateTransfer {
 		 * @param next - name of next state
 		 * @return
 		 */
-		public final UIState jmpLater(int sleepms, Runnable act, String next){
-			final UIState nexts = states.get(next);
+		public final State jmpLater(int sleepms, Runnable act, String next){
+			final State nexts = states.get(next);
 			if(nexts == null) throw new RuntimeException("State not found: " + next);
 			runs.add(() -> {
 				ses.schedule(() -> {
@@ -319,7 +326,7 @@ public final class UIStateTransfer {
 		 * @param act - the action
 		 * @return this object
 		 */
-		public final UIState into(Runnable act) {
+		public final State into(Runnable act) {
 			this.into = act;
 			return this;
 		}
@@ -328,7 +335,7 @@ public final class UIStateTransfer {
 		 * @param act - the action
 		 * @return this object
 		 */
-		public final UIState leave(Runnable act) {
+		public final State leave(Runnable act) {
 			this.leave = act;
 			return this;
 		}
@@ -339,7 +346,7 @@ public final class UIStateTransfer {
 		 * @return this object
 		 */
 		@SafeVarargs
-		public final <T> UIState set(T val, Consumer<T>... m) {
+		public final <T> State set(T val, Consumer<T>... m) {
 			runs.add(() -> {for(Consumer<T> mx : m) mx.accept(val);});
 			return this;
 		}

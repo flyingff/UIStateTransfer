@@ -18,7 +18,7 @@ import javax.swing.JLabel;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.UIManager;
 
-import net.flyingff.commons.ui.UIStateTransfer;
+import net.flyingff.commons.ui.StateTransfer;
 
 public class GameX extends JFrame {
 	private static final long serialVersionUID = 8710755681994681182L;
@@ -47,7 +47,7 @@ public class GameX extends JFrame {
 		btnWait = new JButton("等待客户端");
 		
 		// 设定游戏流程
-		UIStateTransfer t = new UIStateTransfer();
+		StateTransfer t = new StateTransfer();
 		// 声明所需的所有状态
 		final String INIT = "初始化", WAITSERV = "等待服务器", WAITCLNT = "等待客户端"
 				, LINKED = "已连接", READY = "就绪", WAITSELF = "对方已出拳"
